@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const _ = require("lodash");
 const path = require("path");
+const fs = require("fs");
 
 router.post("/saveimage", async (req, res) => {
   let result = [];
@@ -23,6 +24,8 @@ router.post("/saveimage", async (req, res) => {
         const movePath =
           __dirname +
           path.sep +
+          "images" +
+          path.sep +
           file.name.split(".")[0].split("_").join(path.sep) +
           "." +
           file.name.split(".")[1];
@@ -37,16 +40,22 @@ router.post("/saveimage", async (req, res) => {
   res.send(result).status(200);
 });
 
-router.get("/getimage/:customerId/:companyId/:keyword", async (req, res) => {
-  try {
-    const myPath =
-      [req.params.customerId, req.params.companyId, req.params.keyword].join(
-        path.sep,
-      ) + ".png";
-    return res.sendFile(path.resolve(myPath));
-  } catch (err) {
-    console.log(err);
-  }
+router.get("/getimage/:name", async (req, res) => {
+  const myPath =
+    req.query.customerId && req.query.companyId
+      ? [req.query.customerId, req.query.companyId, req.params.name].join(
+          path.sep,
+        )
+      : req.params.name;
+
+  const file = path.resolve("images" + path.sep + myPath + ".png");
+
+  return fs.existsSync(file)
+    ? res.sendFile(file)
+    : res.status(404).send({
+        status: false,
+        message: `Chart "${req.params.name}_${req.query.companyId}" not found.`,
+      });
 });
 
 module.exports = router;
