@@ -3,6 +3,7 @@ const router = express.Router();
 const _ = require("lodash");
 const path = require("path");
 const fs = require("fs");
+var Jimp = require("jimp");
 
 router.post("/saveimage", async (req, res) => {
   let result = [];
@@ -41,21 +42,30 @@ router.post("/saveimage", async (req, res) => {
 });
 
 router.get("/getimage/:name", async (req, res) => {
+  let { customerId, companyId, width, height } = req.query;
+
   const myPath =
-    req.query.customerId && req.query.companyId
-      ? [req.query.customerId, req.query.companyId, req.params.name].join(
-          path.sep,
-        )
+    customerId && companyId
+      ? [customerId, companyId, req.params.name].join(path.sep)
       : req.params.name;
 
-  const file = path.resolve("images" + path.sep + myPath + ".png");
+  const filePath = path.resolve("images" + path.sep + myPath + ".png");
 
-  return fs.existsSync(file)
-    ? res.sendFile(file)
-    : res.status(404).send({
-        status: false,
-        message: `Chart "${req.params.name}_${req.query.companyId}" not found.`,
-      });
+  if (fs.existsSync(filePath)) {
+    if (width && height) {
+      let image = await Jimp.read(filePath);
+      image = image.resize(Number.parseFloat(width), Number.parseFloat(height));
+      const result = await image.getBufferAsync("image/png");
+      return res.type("png").send(result);
+    }
+
+    return res.sendFile(filePath);
+  }
+
+  return res.status(404).send({
+    status: false,
+    message: `Chart "${req.params.name}_${req.query.companyId}" not found.`,
+  });
 });
 
 module.exports = router;
